@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Button, ProgressBar, ListGroup, Badge, Modal, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Badge, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesAPI, enrollmentAPI, certificateAPI } from '../services/api';
 import { generateCertificate, downloadCertificate } from '../utils/certificateGenerator';
+import './Learning.css';
 
 const Learning = () => {
   const { courseId } = useParams();
@@ -17,6 +18,9 @@ const Learning = () => {
   const [certificateData, setCertificateData] = useState(null);
   const [generatingCertificate, setGeneratingCertificate] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
 
   const fetchLearningData = useCallback(async () => {
     try {
@@ -34,6 +38,11 @@ const Learning = () => {
         setEnrollment(enrollmentResponse.data);
         const completedLessonIds = enrollmentResponse.data.completedResources?.map(r => r.resourceId) || [];
         setCompletedLessons(completedLessonIds);
+        
+        // Animate progress bar
+        setTimeout(() => {
+          setAnimatedProgress(enrollmentResponse.data.progress || 0);
+        }, 500);
         
         // Set current lesson (first incomplete lesson or first lesson)
         const firstIncompleteLesson = findFirstIncompleteLesson(
@@ -90,19 +99,28 @@ const Learning = () => {
   };
 
   const handleLessonSelect = (moduleIndex, lessonIndex) => {
-    const module = course.modules[moduleIndex];
-    const lesson = module.lessons[lessonIndex];
-    setCurrentLesson({
-      ...lesson,
-      moduleIndex,
-      lessonIndex
-    });
+    setIsTransitioning(true);
+    
+    // Small delay for smooth transition animation
+    setTimeout(() => {
+      const module = course.modules[moduleIndex];
+      const lesson = module.lessons[lessonIndex];
+      setCurrentLesson({
+        ...lesson,
+        moduleIndex,
+        lessonIndex
+      });
+      setIsTransitioning(false);
+    }, 200);
   };
 
   const markLessonComplete = async () => {
     if (!currentLesson || !currentLesson._id) return;
     
     try {
+      // Show completion celebration
+      setShowCompletionCelebration(true);
+      
       const response = await enrollmentAPI.markLessonComplete(courseId, currentLesson._id);
       if (response.success) {
         // Update completed lessons list
@@ -119,16 +137,27 @@ const Learning = () => {
         await enrollmentAPI.updateProgress(courseId, newProgress);
         setEnrollment({ ...enrollment, progress: newProgress });
         
-        // Check if course is completed
-        if (newProgress >= 100) {
-          await handleCourseCompletion();
-        } else {
-          // Move to next lesson
-          moveToNextLesson();
-        }
+        // Animate progress bar with delay
+        setTimeout(() => {
+          setAnimatedProgress(newProgress);
+        }, 300);
+        
+        // Hide celebration after delay
+        setTimeout(() => {
+          setShowCompletionCelebration(false);
+          
+          // Check if course is completed
+          if (newProgress >= 100) {
+            handleCourseCompletion();
+          } else {
+            // Move to next lesson
+            moveToNextLesson();
+          }
+        }, 1500);
       }
     } catch (error) {
       console.error('Error marking lesson complete:', error);
+      setShowCompletionCelebration(false);
     }
   };
 
@@ -184,6 +213,18 @@ const Learning = () => {
     );
   };
 
+  const getModuleProgress = (moduleIndex) => {
+    if (!course.modules || !course.modules[moduleIndex]) return 0;
+    const module = course.modules[moduleIndex];
+    if (!module.lessons || module.lessons.length === 0) return 0;
+    
+    const completedCount = module.lessons.filter((lesson, lessonIndex) => 
+      isLessonCompleted(moduleIndex, lessonIndex)
+    ).length;
+    
+    return Math.round((completedCount / module.lessons.length) * 100);
+  };
+
   const handleCourseCompletion = async () => {
     try {
       setGeneratingCertificate(true);
@@ -231,24 +272,35 @@ const Learning = () => {
 
   if (loading) {
     return (
-      <Container className="py-5">
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="learning-loading">
+        <Container className="py-5">
+          <div className="text-center">
+            <div className="learning-spinner"></div>
+            <h4 className="mt-4 text-white">Loading your course...</h4>
+            <p className="text-white opacity-75">Please wait while we prepare your learning experience</p>
+            <div className="loading-dots">
+              <div className="loading-dot"></div>
+              <div className="loading-dot"></div>
+              <div className="loading-dot"></div>
+            </div>
           </div>
-          <p className="mt-3 text-muted">Loading course content...</p>
-        </div>
-      </Container>
+        </Container>
+      </div>
     );
   }
 
   if (!course || !enrollment) {
     return (
       <Container className="py-5">
-        <div className="text-center">
-          <h4>Access Denied</h4>
+        <div className="access-denied">
+          <div className="access-denied-icon">🚫</div>
+          <h4 className="mt-3">Access Denied</h4>
           <p className="text-muted">You don't have access to this course.</p>
-          <Button variant="primary" onClick={() => navigate('/courses')}>
+          <Button 
+            variant="primary" 
+            onClick={() => navigate('/courses')}
+            className="modern-btn-primary"
+          >
             Browse Courses
           </Button>
         </div>
@@ -258,244 +310,296 @@ const Learning = () => {
 
   return (
     <div className="learning-page">
-      {/* Header */}
-      <div className="bg-primary text-white py-3">
+      {/* Completion Celebration */}
+      {showCompletionCelebration && (
+        <div className="completion-celebration">
+          <div className="celebration-content">
+            <div className="celebration-emoji">🎉</div>
+            <h3>Lesson Completed!</h3>
+            <p>Great job! Moving to the next lesson...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Header */}
+      <div className="modern-learning-header">
         <Container>
-          <Row className="align-items-center">
-            <Col>
-              <h5 className="mb-1">{course.title}</h5>
-              <div className="d-flex align-items-center">
-                <small className="me-3">
-                  Progress: {enrollment.progress || 0}%
-                </small>
-                <ProgressBar 
-                  now={enrollment.progress || 0} 
-                  variant="warning"
-                  className="flex-grow-1"
-                  style={{ height: '8px' }}
-                />
-                <small className="ms-3">
-                  {completedLessons.length} / {getTotalLessons()} lessons
-                </small>
-              </div>
-            </Col>
-            <Col xs="auto">
-              <Button 
-                variant="outline-light" 
-                size="sm"
-                onClick={() => navigate(`/course/${courseId}`)}
-              >
-                <i className="bi bi-arrow-left me-2"></i>
-                Course Details
-              </Button>
-            </Col>
-          </Row>
+          <div className="course-header-content">
+            <Row className="align-items-center">
+              <Col>
+                <div className="course-title-badge">{course.category || 'Course'}</div>
+                <h1 className="course-main-title">{course.title}</h1>
+                <div className="progress-section">
+                  <div className="progress-info">
+                    <span className="progress-label">Your Progress</span>
+                    <span className="progress-percentage">{animatedProgress}%</span>
+                  </div>
+                  <div className="modern-progress-wrapper">
+                    <div 
+                      className="modern-progress-bar"
+                      style={{ width: `${animatedProgress}%` }}
+                    ></div>
+                  </div>
+                  <div className="lesson-count">
+                    <i className="bi bi-check-circle-fill"></i>
+                    {completedLessons.length} of {getTotalLessons()} lessons completed
+                  </div>
+                </div>
+              </Col>
+              <Col xs="auto">
+                <a 
+                  href={`#/course/${courseId}`}
+                  className="back-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(`/course/${courseId}`);
+                  }}
+                >
+                  <i className="bi bi-arrow-left"></i>
+                  Course Details
+                </a>
+              </Col>
+            </Row>
+          </div>
         </Container>
       </div>
 
-      <Container fluid className="py-0">
+      <Container fluid className="learning-container">
         <Row className="g-0">
-          {/* Course Content Sidebar */}
-          <Col lg={3} className="bg-light border-end">
-            <div className="p-3">
-              <h6 className="fw-bold mb-3">Course Content</h6>
+          {/* Modern Sidebar */}
+          <Col lg={3} className="sidebar-col">
+            <div className="modern-sidebar">
+              <div className="sidebar-header">
+                <h3 className="sidebar-title">
+                  <i className="bi bi-journal-bookmark"></i>
+                  Course Content
+                </h3>
+              </div>
               
-              {course.modules && course.modules.map((module, moduleIndex) => (
-                <Card className="mb-3 border-0 shadow-sm" key={moduleIndex}>
-                  <Card.Header className="bg-white py-2">
-                    <h6 className="mb-0">{module.title}</h6>
-                  </Card.Header>
-                  <ListGroup variant="flush">
-                    {module.lessons && module.lessons.map((lesson, lessonIndex) => {
-                      const isCompleted = isLessonCompleted(moduleIndex, lessonIndex);
-                      const isCurrent = currentLesson?._id === lesson._id;
+              <div className="modules-container">
+                {course.modules && course.modules.map((module, moduleIndex) => {
+                  const moduleProgress = getModuleProgress(moduleIndex);
+                  
+                  return (
+                    <div className="modern-module fade-in" key={moduleIndex}>
+                      <div className="module-header">
+                        <h4 className="module-title">{module.title}</h4>
+                        <div className="module-progress-wrapper">
+                          <div 
+                            className="module-progress-bar"
+                            style={{ width: `${moduleProgress}%` }}
+                          ></div>
+                        </div>
+                        <span className="module-progress-text">{moduleProgress}% Complete</span>
+                      </div>
                       
-                      return (
-                        <ListGroup.Item
-                          key={lessonIndex}
-                          action
-                          active={isCurrent}
-                          onClick={() => handleLessonSelect(moduleIndex, lessonIndex)}
-                          className="d-flex justify-content-between align-items-center py-2"
-                        >
-                          <div className="d-flex align-items-center">
-                            {isCompleted ? (
-                              <i className="bi bi-check-circle-fill text-success me-2"></i>
-                            ) : (
-                              <i className="bi bi-play-circle text-primary me-2"></i>
-                            )}
-                            <span className={`${isCurrent ? 'fw-bold' : ''}`}>
-                              {lesson.title}
-                            </span>
-                          </div>
-                          <small className="text-muted">{lesson.duration}</small>
-                        </ListGroup.Item>
-                      );
-                    })}
-                  </ListGroup>
-                </Card>
-              ))}
+                      <div className="lessons-list">
+                        {module.lessons && module.lessons.map((lesson, lessonIndex) => {
+                          const isCompleted = isLessonCompleted(moduleIndex, lessonIndex);
+                          const isCurrent = currentLesson?._id === lesson._id;
+                          
+                          return (
+                            <div
+                              key={lessonIndex}
+                              className={`modern-lesson-item ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                              onClick={() => handleLessonSelect(moduleIndex, lessonIndex)}
+                            >
+                              <div className="lesson-icon">
+                                {isCompleted ? (
+                                  <i className="bi bi-check-circle-fill"></i>
+                                ) : isCurrent ? (
+                                  <i className="bi bi-play-circle-fill"></i>
+                                ) : (
+                                  <i className="bi bi-circle"></i>
+                                )}
+                              </div>
+                              <div className="lesson-content">
+                                <h5 className="lesson-title">{lesson.title}</h5>
+                                <span className="lesson-duration">{lesson.duration}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </Col>
 
-          {/* Main Learning Area */}
-          <Col lg={9}>
-            <div className="p-4">
-              {currentLesson ? (
+          {/* Modern Main Content */}
+          <Col lg={9} className="content-col">
+            <div className="modern-content">
+              {/* Content Transition Wrapper */}
+              <div className={`content-wrapper ${isTransitioning ? 'transitioning' : ''}`}>
+                {currentLesson ? (
                 <>
                   {/* Lesson Header */}
-                  <div className="mb-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <h3 className="fw-bold">{currentLesson.title}</h3>
-                      <Badge bg={isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) ? 'success' : 'secondary'}>
-                        {isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) ? 'Completed' : 'In Progress'}
-                      </Badge>
-                    </div>
-                    <p className="text-muted">{currentLesson.description}</p>
-                  </div>
-
-                  {/* Content Area */}
-                  <Card className="mb-4 border-0 shadow-sm">
-                    <Card.Body className="p-4">
-                      {/* Video Section - only show if video URL exists */}
-                      {currentLesson.videoUrl && (
-                        <div className="mb-4">
-                          <h5 className="fw-bold mb-3">
-                            <i className="bi bi-play-circle me-2"></i>
-                            Video Lesson
-                          </h5>
-                          <div className="ratio ratio-16x9 mb-3">
-                            <video 
-                              controls 
-                              className="rounded"
-                              style={{ backgroundColor: '#000' }}
-                            >
-                              <source src={currentLesson.videoUrl} type="video/mp4" />
-                              Your browser does not support the video tag.
-                            </video>
-                          </div>
-                          <div className="d-flex align-items-center text-muted mb-3">
-                            <i className="bi bi-clock me-2"></i>
-                            Duration: {currentLesson.duration}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Text Content Section */}
+                  <div className="lesson-header slide-in-right">
+                    <div className="lesson-header-top">
                       <div>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                          <h5 className="fw-bold mb-0">
-                            <i className="bi bi-file-text me-2"></i>
-                            Lesson Content
-                          </h5>
-                          {!currentLesson.videoUrl && currentLesson.duration && (
-                            <div className="d-flex align-items-center text-muted">
-                              <i className="bi bi-clock me-2"></i>
-                              Duration: {currentLesson.duration}
-                            </div>
-                          )}
-                        </div>
-                        <div className="lesson-content">
-                          {currentLesson.content ? (
-                            <div 
-                              className="text-content"
-                              style={{ 
-                                lineHeight: '1.6', 
-                                fontSize: '1.1rem',
-                                whiteSpace: 'pre-wrap'
-                              }}
-                            >
-                              {currentLesson.content}
-                            </div>
+                        <h1 className="lesson-main-title">{currentLesson.title}</h1>
+                        <p className="lesson-description">{currentLesson.description}</p>
+                      </div>
+                      <div>
+                        <Badge 
+                          className={`status-badge ${isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) ? 'completed' : 'in-progress'}`}
+                        >
+                          {isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) ? (
+                            <>
+                              <i className="bi bi-check-circle-fill"></i>
+                              Completed
+                            </>
                           ) : (
-                            <div className="text-center py-4">
-                              <i className="bi bi-file-text display-4 text-muted mb-3"></i>
-                              <h6 className="text-muted">No content available for this lesson</h6>
-                              <p className="text-muted small">
-                                The instructor hasn't added content for this lesson yet.
-                              </p>
-                            </div>
+                            <>
+                              <i className="bi bi-play-circle"></i>
+                              In Progress
+                            </>
                           )}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {currentLesson.duration && (
+                      <div className="lesson-meta">
+                        <div className="meta-item">
+                          <i className="bi bi-clock"></i>
+                          <span>Duration: {currentLesson.duration}</span>
                         </div>
                       </div>
-                      
-                      {/* Additional Resources Section */}
-                      {currentLesson.resources && currentLesson.resources.length > 0 && (
-                        <div className="mt-4 pt-4 border-top">
-                          <h6 className="fw-bold mb-3">
-                            <i className="bi bi-link-45deg me-2"></i>
-                            Additional Resources
-                          </h6>
-                          <div className="list-group list-group-flush">
-                            {currentLesson.resources.map((resource, index) => (
-                              <a 
-                                key={index}
-                                href={resource.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                              >
-                                <div>
-                                  <strong>{resource.title}</strong>
-                                  {resource.description && (
-                                    <div className="text-muted small">{resource.description}</div>
-                                  )}
-                                </div>
-                                <i className="bi bi-box-arrow-up-right"></i>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </Card.Body>
-                  </Card>
+                    )}
+                  </div>
 
-                  {/* Lesson Controls */}
-                  <div className="d-flex justify-content-between align-items-center">
+                  {/* Content Card */}
+                  <div className="content-card fade-in">
+                    {/* Video Section */}
+                    {currentLesson.videoUrl && (
+                      <div className="content-section">
+                        <div className="section-header">
+                          <i className="bi bi-camera-video section-icon"></i>
+                          <h3 className="section-title">Video Lesson</h3>
+                        </div>
+                        <div className="video-container">
+                          <video 
+                            controls 
+                            className="lesson-video"
+                          >
+                            <source src={currentLesson.videoUrl} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      </div>
+                    )}
+                      
+                    {/* Text Content Section */}
+                    <div className="content-section">
+                      <div className="section-header">
+                        <i className="bi bi-file-text section-icon"></i>
+                        <h3 className="section-title">Lesson Content</h3>
+                      </div>
+                      
+                      <div className="lesson-text-content">
+                        {currentLesson.content ? (
+                          <div className="content-text">
+                            {currentLesson.content}
+                          </div>
+                        ) : (
+                          <div className="no-content">
+                            <div className="no-content-icon">📄</div>
+                            <h4>No content available</h4>
+                            <p>The instructor hasn't added content for this lesson yet.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                      
+                    {/* Additional Resources Section */}
+                    {currentLesson.resources && currentLesson.resources.length > 0 && (
+                      <div className="content-section">
+                        <div className="section-header">
+                          <i className="bi bi-link-45deg section-icon"></i>
+                          <h3 className="section-title">Additional Resources</h3>
+                        </div>
+                        <div className="resources-grid">
+                          {currentLesson.resources.map((resource, index) => (
+                            <a 
+                              key={index}
+                              href={resource.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="resource-card"
+                            >
+                              <div className="resource-content">
+                                <h4>{resource.title}</h4>
+                                {resource.description && (
+                                  <p>{resource.description}</p>
+                                )}
+                              </div>
+                              <i className="bi bi-box-arrow-up-right"></i>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Navigation Controls */}
+                  <div className="lesson-navigation">
                     <Button 
-                      variant="outline-secondary"
+                      className="nav-button prev-button"
                       onClick={() => {
                         const prevLesson = findPreviousLesson();
                         if (prevLesson) setCurrentLesson(prevLesson);
                       }}
                       disabled={!findPreviousLesson()}
                     >
-                      <i className="bi bi-arrow-left me-2"></i>
+                      <i className="bi bi-arrow-left"></i>
                       Previous Lesson
                     </Button>
 
-                    <div className="d-flex gap-2">
+                    <div className="center-buttons">
                       {!isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) && (
-                        <Button variant="success" onClick={markLessonComplete}>
-                          <i className="bi bi-check me-2"></i>
+                        <Button 
+                          className="complete-button"
+                          onClick={markLessonComplete}
+                        >
+                          <i className="bi bi-check-circle"></i>
                           Mark as Complete
                         </Button>
                       )}
-                      
-                      <Button 
-                        variant="primary"
-                        onClick={moveToNextLesson}
-                        disabled={!findNextLesson()}
-                      >
-                        Next Lesson
-                        <i className="bi bi-arrow-right ms-2"></i>
-                      </Button>
                     </div>
+
+                    <Button 
+                      className="nav-button next-button"
+                      onClick={moveToNextLesson}
+                      disabled={!findNextLesson()}
+                    >
+                      Next Lesson
+                      <i className="bi bi-arrow-right"></i>
+                    </Button>
                   </div>
                 </>
               ) : (
-                <div className="text-center py-5">
-                  <i className="bi bi-book display-4 text-muted mb-3"></i>
-                  <h4>No Content Available</h4>
-                  <p className="text-muted">This course doesn't have any lessons yet.</p>
+                <div className="no-lesson-content">
+                  <div className="no-lesson-icon">📚</div>
+                  <h2>No Content Available</h2>
+                  <p>This course doesn't have any lessons yet.</p>
+                  <Button 
+                    className="modern-btn-primary"
+                    onClick={() => navigate('/courses')}
+                  >
+                    Explore Other Courses
+                  </Button>
                 </div>
               )}
+              </div>
             </div>
           </Col>
         </Row>
       </Container>
 
-      {/* Certificate Modal */}
+      {/* Modern Certificate Modal */}
       <Modal 
         show={showCertificate} 
         onHide={() => setShowCertificate(false)} 
@@ -503,107 +607,92 @@ const Learning = () => {
         size="lg"
         backdrop="static"
         keyboard={false}
+        className="modern-certificate-modal"
       >
-        <Modal.Header className="bg-success text-white border-0">
-          <Modal.Title className="d-flex align-items-center">
-            <i className="bi bi-trophy-fill me-3 display-6"></i>
-            🎉 Congratulations!
+        <Modal.Header className="certificate-modal-header">
+          <Modal.Title className="certificate-modal-title">
+            <div className="celebration-icon">🎉</div>
+            <div>
+              <h2>Congratulations!</h2>
+              <p>You've completed the course</p>
+            </div>
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body className="text-center py-5">
-          <div className="mb-4">
-            <div className="position-relative d-inline-block">
-              <i className="bi bi-award display-1 text-warning mb-4"></i>
-              <div 
-                className="position-absolute top-50 start-50 translate-middle"
-                style={{ 
-                  animation: 'pulse 2s infinite',
-                  fontSize: '2rem' 
-                }}
-              >
-                ✨
-              </div>
-            </div>
+        <Modal.Body className="certificate-modal-body">
+          <div className="completion-animation">
+            <div className="trophy-icon">🏆</div>
+            <div className="sparkles">✨</div>
           </div>
           
-          <h2 className="fw-bold text-success mb-3">Course Completed!</h2>
-          <p className="lead mb-4">
-            You have successfully completed
-          </p>
-          <h4 className="text-primary fw-bold mb-4">"{course?.title}"</h4>
+          <h3 className="course-completion-title">Course Completed Successfully!</h3>
+          <h4 className="completed-course-name">"{course?.title}"</h4>
           
           {generatingCertificate ? (
-            <div className="mb-4">
-              <Spinner animation="border" variant="primary" className="me-2" />
-              <span className="text-muted">Generating your certificate...</span>
+            <div className="certificate-generating">
+              <div className="generating-spinner"></div>
+              <p>Generating your certificate...</p>
             </div>
           ) : certificateData ? (
-            <div className="mb-4">
-              <div className="alert alert-success border-0 shadow-sm">
-                <i className="bi bi-check-circle-fill me-2"></i>
+            <div className="certificate-ready">
+              <div className="certificate-success">
+                <i className="bi bi-check-circle-fill"></i>
                 Your certificate is ready!
               </div>
-              <div className="certificate-details text-start bg-light p-3 rounded mb-3">
-                <h6 className="fw-bold mb-2">Certificate Details:</h6>
-                <div className="row">
-                  <div className="col-sm-6">
-                    <small className="text-muted">Student:</small>
-                    <div className="fw-semibold">{certificateData.studentName}</div>
+              <div className="certificate-details">
+                <h5>Certificate Details</h5>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <span className="label">Student:</span>
+                    <span className="value">{certificateData.studentName}</span>
                   </div>
-                  <div className="col-sm-6">
-                    <small className="text-muted">Completion Date:</small>
-                    <div className="fw-semibold">
+                  <div className="detail-item">
+                    <span className="label">Completion Date:</span>
+                    <span className="value">
                       {new Date(certificateData.completionDate).toLocaleDateString()}
-                    </div>
+                    </span>
                   </div>
-                  <div className="col-sm-6">
-                    <small className="text-muted">Instructor:</small>
-                    <div className="fw-semibold">{certificateData.instructorName}</div>
+                  <div className="detail-item">
+                    <span className="label">Instructor:</span>
+                    <span className="value">{certificateData.instructorName}</span>
                   </div>
-                  <div className="col-sm-6">
-                    <small className="text-muted">Certificate ID:</small>
-                    <div className="fw-semibold font-monospace small">
+                  <div className="detail-item">
+                    <span className="label">Certificate ID:</span>
+                    <span className="value certificate-id">
                       {certificateData.certificateId?.substring(0, 8)}...
-                    </div>
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mb-4">
-              <p className="text-muted">
-                Your achievement has been recorded and will be available in your dashboard.
-              </p>
+            <div className="certificate-info">
+              <p>Your achievement has been recorded and will be available in your dashboard.</p>
             </div>
           )}
           
-          <div className="d-flex gap-2 justify-content-center flex-wrap">
+          <div className="modal-actions">
             <Button 
-              variant="success" 
-              size="lg"
+              className="modal-action-btn primary"
               onClick={() => navigate('/dashboard')}
-              className="d-flex align-items-center"
             >
-              <i className="bi bi-speedometer2 me-2"></i>
+              <i className="bi bi-speedometer2"></i>
               View Dashboard
             </Button>
             
             {certificateData && (
               <Button 
-                variant="primary" 
-                size="lg"
+                className="modal-action-btn secondary"
                 onClick={handleDownloadCertificate}
                 disabled={downloadingCertificate}
-                className="d-flex align-items-center"
               >
                 {downloadingCertificate ? (
                   <>
-                    <Spinner size="sm" className="me-2" />
+                    <div className="btn-spinner"></div>
                     Downloading...
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-download me-2"></i>
+                    <i className="bi bi-download"></i>
                     Download Certificate
                   </>
                 )}
@@ -611,20 +700,12 @@ const Learning = () => {
             )}
             
             <Button 
-              variant="outline-info" 
-              size="lg"
+              className="modal-action-btn tertiary"
               onClick={() => navigate('/courses')}
-              className="d-flex align-items-center"
             >
-              <i className="bi bi-book me-2"></i>
+              <i className="bi bi-book"></i>
               Explore More Courses
             </Button>
-          </div>
-          
-          <div className="mt-4 pt-3 border-top">
-            <small className="text-muted">
-              🎓 Well done! Keep learning and growing with EduLearn.
-            </small>
           </div>
         </Modal.Body>
       </Modal>
