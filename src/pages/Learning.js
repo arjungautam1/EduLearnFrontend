@@ -3,6 +3,7 @@ import { Container, Row, Col, Button, Badge, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesAPI, enrollmentAPI, certificateAPI } from '../services/api';
 import { generateCertificate, downloadCertificate } from '../utils/certificateGenerator';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import './Learning.css';
 
 const Learning = () => {
@@ -325,13 +326,18 @@ const Learning = () => {
       <div className="modern-learning-header">
         <Container>
           <div className="course-header-content">
-            <Row className="align-items-center">
-              <Col>
+            <div className="header-layout">
+              {/* Course Info - Left */}
+              <div className="course-info-left">
                 <div className="course-title-badge">{course.category || 'Course'}</div>
                 <h1 className="course-main-title">{course.title}</h1>
+              </div>
+
+              {/* Progress - Center */}
+              <div className="progress-center">
                 <div className="progress-section">
                   <div className="progress-info">
-                    <span className="progress-label">Your Progress</span>
+                    <span className="progress-label">Progress</span>
                     <span className="progress-percentage">{animatedProgress}%</span>
                   </div>
                   <div className="modern-progress-wrapper">
@@ -342,11 +348,13 @@ const Learning = () => {
                   </div>
                   <div className="lesson-count">
                     <i className="bi bi-check-circle-fill"></i>
-                    {completedLessons.length} of {getTotalLessons()} lessons completed
+                    {completedLessons.length} of {getTotalLessons()} lessons
                   </div>
                 </div>
-              </Col>
-              <Col xs="auto">
+              </div>
+
+              {/* Course Details - Right */}
+              <div className="course-details-right">
                 <a 
                   href={`#/course/${courseId}`}
                   className="back-btn"
@@ -356,10 +364,10 @@ const Learning = () => {
                   }}
                 >
                   <i className="bi bi-arrow-left"></i>
-                  Course Details
+                  Details
                 </a>
-              </Col>
-            </Row>
+              </div>
+            </div>
           </div>
         </Container>
       </div>
@@ -442,7 +450,13 @@ const Learning = () => {
                         <h1 className="lesson-main-title">{currentLesson.title}</h1>
                         <p className="lesson-description">{currentLesson.description}</p>
                       </div>
-                      <div>
+                      <div className="lesson-header-right">
+                        {currentLesson.duration && (
+                          <div className="lesson-duration-badge">
+                            <i className="bi bi-clock"></i>
+                            {currentLesson.duration}
+                          </div>
+                        )}
                         <Badge 
                           className={`status-badge ${isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) ? 'completed' : 'in-progress'}`}
                         >
@@ -461,14 +475,6 @@ const Learning = () => {
                       </div>
                     </div>
                     
-                    {currentLesson.duration && (
-                      <div className="lesson-meta">
-                        <div className="meta-item">
-                          <i className="bi bi-clock"></i>
-                          <span>Duration: {currentLesson.duration}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Content Card */}
@@ -502,7 +508,7 @@ const Learning = () => {
                       <div className="lesson-text-content">
                         {currentLesson.content ? (
                           <div className="content-text">
-                            {currentLesson.content}
+                            <MarkdownRenderer content={currentLesson.content} />
                           </div>
                         ) : (
                           <div className="no-content">
@@ -547,22 +553,24 @@ const Learning = () => {
                   {/* Navigation Controls */}
                   <div className="lesson-navigation">
                     <Button 
-                      className="nav-button prev-button"
+                      className="nav-button prev-button compact"
                       onClick={() => {
                         const prevLesson = findPreviousLesson();
                         if (prevLesson) setCurrentLesson(prevLesson);
                       }}
                       disabled={!findPreviousLesson()}
+                      size="sm"
                     >
                       <i className="bi bi-arrow-left"></i>
-                      Previous Lesson
+                      Previous
                     </Button>
 
                     <div className="center-buttons">
                       {!isLessonCompleted(currentLesson.moduleIndex, currentLesson.lessonIndex) && (
                         <Button 
-                          className="complete-button"
+                          className="complete-button compact"
                           onClick={markLessonComplete}
+                          size="sm"
                         >
                           <i className="bi bi-check-circle"></i>
                           Mark as Complete
@@ -571,11 +579,12 @@ const Learning = () => {
                     </div>
 
                     <Button 
-                      className="nav-button next-button"
+                      className="nav-button next-button compact"
                       onClick={moveToNextLesson}
                       disabled={!findNextLesson()}
+                      size="sm"
                     >
-                      Next Lesson
+                      Next
                       <i className="bi bi-arrow-right"></i>
                     </Button>
                   </div>
@@ -604,109 +613,83 @@ const Learning = () => {
         show={showCertificate} 
         onHide={() => setShowCertificate(false)} 
         centered 
-        size="lg"
+        size="md"
         backdrop="static"
         keyboard={false}
-        className="modern-certificate-modal"
+        className="modern-certificate-modal compact"
       >
-        <Modal.Header className="certificate-modal-header">
-          <Modal.Title className="certificate-modal-title">
+        <Modal.Header className="certificate-modal-header compact">
+          <Modal.Title className="certificate-modal-title compact">
             <div className="celebration-icon">🎉</div>
             <div>
-              <h2>Congratulations!</h2>
-              <p>You've completed the course</p>
+              <h4>Congratulations!</h4>
+              <p className="mb-0">Course completed</p>
             </div>
           </Modal.Title>
+          <Button 
+            className="modern-close-btn"
+            onClick={() => setShowCertificate(false)}
+            size="sm"
+            variant="link"
+          >
+            <i className="bi bi-x-lg"></i>
+          </Button>
         </Modal.Header>
-        <Modal.Body className="certificate-modal-body">
-          <div className="completion-animation">
+        <Modal.Body className="certificate-modal-body compact">
+          <div className="completion-animation compact">
             <div className="trophy-icon">🏆</div>
-            <div className="sparkles">✨</div>
           </div>
           
-          <h3 className="course-completion-title">Course Completed Successfully!</h3>
-          <h4 className="completed-course-name">"{course?.title}"</h4>
+          <h5 className="course-completion-title">"{course?.title}"</h5>
           
           {generatingCertificate ? (
-            <div className="certificate-generating">
+            <div className="certificate-generating compact">
               <div className="generating-spinner"></div>
-              <p>Generating your certificate...</p>
+              <p className="mb-0">Generating certificate...</p>
             </div>
           ) : certificateData ? (
-            <div className="certificate-ready">
-              <div className="certificate-success">
-                <i className="bi bi-check-circle-fill"></i>
-                Your certificate is ready!
-              </div>
-              <div className="certificate-details">
-                <h5>Certificate Details</h5>
-                <div className="details-grid">
+            <div className="certificate-ready compact">
+              <div className="certificate-details compact">
+                <div className="details-grid compact">
                   <div className="detail-item">
                     <span className="label">Student:</span>
                     <span className="value">{certificateData.studentName}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="label">Completion Date:</span>
+                    <span className="label">Date:</span>
                     <span className="value">
                       {new Date(certificateData.completionDate).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="detail-item">
-                    <span className="label">Instructor:</span>
-                    <span className="value">{certificateData.instructorName}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="label">Certificate ID:</span>
-                    <span className="value certificate-id">
-                      {certificateData.certificateId?.substring(0, 8)}...
-                    </span>
-                  </div>
                 </div>
+              </div>
+              
+              <div className="download-certificate-section">
+                <Button 
+                  className="download-certificate-btn"
+                  onClick={handleDownloadCertificate}
+                  disabled={downloadingCertificate}
+                  size="lg"
+                >
+                  {downloadingCertificate ? (
+                    <>
+                      <div className="btn-spinner"></div>
+                      Downloading Certificate...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-download"></i>
+                      Download Certificate
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           ) : (
-            <div className="certificate-info">
-              <p>Your achievement has been recorded and will be available in your dashboard.</p>
+            <div className="certificate-info compact">
+              <p className="mb-0">Achievement recorded in your dashboard.</p>
             </div>
           )}
-          
-          <div className="modal-actions">
-            <Button 
-              className="modal-action-btn primary"
-              onClick={() => navigate('/dashboard')}
-            >
-              <i className="bi bi-speedometer2"></i>
-              View Dashboard
-            </Button>
-            
-            {certificateData && (
-              <Button 
-                className="modal-action-btn secondary"
-                onClick={handleDownloadCertificate}
-                disabled={downloadingCertificate}
-              >
-                {downloadingCertificate ? (
-                  <>
-                    <div className="btn-spinner"></div>
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-download"></i>
-                    Download Certificate
-                  </>
-                )}
-              </Button>
-            )}
-            
-            <Button 
-              className="modal-action-btn tertiary"
-              onClick={() => navigate('/courses')}
-            >
-              <i className="bi bi-book"></i>
-              Explore More Courses
-            </Button>
-          </div>
         </Modal.Body>
       </Modal>
     </div>

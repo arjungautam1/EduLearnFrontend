@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { coursesAPI, enrollmentAPI } from '../services/api';
 import CourseBanner from '../components/CourseBanner';
 import RatingComponent from '../components/RatingComponent';
+import RichTextEditor from '../components/RichTextEditor';
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -677,18 +678,15 @@ const CourseDetail = () => {
                         </div>
 
                         <div className="mb-3">
-                          <label className="form-label fw-semibold text-dark mb-2">
+                          <label className="form-label fw-semibold text-dark mb-3">
                             <i className="bi bi-file-text me-2 text-primary"></i>
                             Course Description *
                           </label>
-                          <textarea 
-                            className="form-control" 
-                            rows="3" 
-                            name="description" 
-                            value={editForm.description} 
-                            onChange={handleEditChange} 
-                            required 
-                            style={{ borderRadius: '8px', border: '1px solid #e9ecef' }}
+                          <RichTextEditor
+                            value={editForm.description}
+                            onChange={(value) => handleEditChange({ target: { name: 'description', value } })}
+                            placeholder="Describe what students will learn and achieve in this course. You can use formatting, lists, and more..."
+                            minHeight={200}
                           />
                         </div>
 
@@ -956,59 +954,104 @@ const CourseDetail = () => {
                           </div>
 
                           {module.lessons && module.lessons.map((lesson, lessonIndex) => (
-                            <Card key={lessonIndex} className="mb-2 border-light">
-                              <Card.Body className="p-2" style={{ backgroundColor: '#f8f9fa' }}>
-                                <div className="d-flex justify-content-between align-items-center mb-2">
-                                  <Badge bg="primary" className="px-2 py-1" style={{ fontSize: '0.7rem' }}>
-                                    Lesson {lessonIndex + 1}
-                                  </Badge>
+                            <Card key={lessonIndex} className="mb-4 border-light shadow-sm">
+                              <Card.Body className="p-4">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                  <div className="d-flex align-items-center">
+                                    <Badge bg="primary" className="px-3 py-2 me-3" style={{ fontSize: '0.8rem' }}>
+                                      <i className="bi bi-play-circle me-1"></i>
+                                      Lesson {lessonIndex + 1}
+                                    </Badge>
+                                    <h6 className="mb-0 text-primary fw-bold">
+                                      {lesson.title || 'Untitled Lesson'}
+                                    </h6>
+                                  </div>
                                   {module.lessons.length > 1 && (
                                     <Button
                                       variant="outline-danger"
                                       size="sm"
                                       onClick={() => removeLesson(moduleIndex, lessonIndex)}
                                       className="rounded-circle"
-                                      style={{ width: '24px', height: '24px' }}
+                                      style={{ width: '32px', height: '32px' }}
                                     >
-                                      <i className="bi bi-trash" style={{ fontSize: '0.6rem' }}></i>
+                                      <i className="bi bi-trash" style={{ fontSize: '0.8rem' }}></i>
                                     </Button>
                                   )}
                                 </div>
                                 
-                                <Row className="mb-2">
+                                <Row className="mb-4">
                                   <Col md={8}>
+                                    <label className="form-label fw-semibold text-dark mb-2">
+                                      <i className="bi bi-pencil me-2 text-primary"></i>
+                                      Lesson Title *
+                                    </label>
                                     <input 
                                       type="text" 
                                       className="form-control" 
-                                      placeholder="Lesson title" 
+                                      placeholder="Enter an engaging lesson title" 
                                       value={lesson.title} 
                                       onChange={e => handleEditLessonChange(moduleIndex, lessonIndex, 'title', e.target.value)}
-                                      style={{ borderRadius: '6px', fontSize: '0.9rem' }}
-                                      size="sm"
+                                      style={{ borderRadius: '8px', border: '1px solid #e9ecef' }}
                                     />
                                   </Col>
                                   <Col md={4}>
+                                    <label className="form-label fw-semibold text-dark mb-2">
+                                      <i className="bi bi-clock me-2 text-primary"></i>
+                                      Duration
+                                    </label>
                                     <input 
                                       type="text" 
                                       className="form-control" 
-                                      placeholder="Duration" 
+                                      placeholder="e.g., 15 minutes" 
                                       value={lesson.duration} 
                                       onChange={e => handleEditLessonChange(moduleIndex, lessonIndex, 'duration', e.target.value)}
-                                      style={{ borderRadius: '6px', fontSize: '0.9rem' }}
-                                      size="sm"
+                                      style={{ borderRadius: '8px', border: '1px solid #e9ecef' }}
                                     />
                                   </Col>
                                 </Row>
                                 
-                                <input 
-                                  type="text" 
-                                  className="form-control" 
-                                  placeholder="Lesson content/description" 
-                                  value={lesson.content} 
-                                  onChange={e => handleEditLessonChange(moduleIndex, lessonIndex, 'content', e.target.value)}
-                                  style={{ borderRadius: '6px', fontSize: '0.9rem' }}
-                                  size="sm"
-                                />
+                                <div className="mb-3">
+                                  <div className="d-flex align-items-center mb-3">
+                                    <div className="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                      <i className="bi bi-file-text text-primary"></i>
+                                    </div>
+                                    <div>
+                                      <label className="form-label fw-bold text-dark mb-1 h5">
+                                        Lesson Content *
+                                      </label>
+                                      <p className="text-muted mb-0 small">
+                                        Edit the lesson content with rich formatting, lists, code examples, and more
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="content-editor-wrapper p-3 bg-light rounded-3">
+                                    <RichTextEditor
+                                      value={lesson.content}
+                                      onChange={(value) => handleEditLessonChange(moduleIndex, lessonIndex, 'content', value)}
+                                      placeholder="✍️ Edit your lesson content here...
+
+📝 You can use:
+• Headings (# ## ###)
+• Bold text (**text**)
+• Lists (- item or 1. item)
+• Code blocks (```code```)
+• Links [text](url)
+• Images ![alt](url)
+• Quotes (> text)
+
+💡 Switch to Preview tab to see how it will look to students!"
+                                      minHeight={500}
+                                    />
+                                  </div>
+                                  
+                                  <div className="mt-2">
+                                    <small className="text-muted d-flex align-items-center">
+                                      <i className="bi bi-lightbulb me-1"></i>
+                                      <strong>Pro tip:</strong> Make sure your updated content is clear and engaging for students.
+                                    </small>
+                                  </div>
+                                </div>
                               </Card.Body>
                             </Card>
                           ))}

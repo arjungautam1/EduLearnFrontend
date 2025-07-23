@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Button, ProgressBar, ListGroup, Badge, Modal
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesAPI, enrollmentAPI, certificateAPI } from '../services/api';
 import { generateCertificate, downloadCertificate } from '../utils/certificateGenerator';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import './ModernLearning.css';
 
 const ModernLearning = () => {
@@ -522,8 +523,9 @@ const ModernLearning = () => {
                       
                       <div className="lesson-text-content">
                         {currentLesson.content ? (
-                          <div className="content-text">
-                            {currentLesson.content}
+                          <div className="content-text p-4 bg-white rounded shadow-sm">
+                            <div style={{color: 'red', fontWeight: 'bold'}}>DEBUG: Using MarkdownRenderer</div>
+                            <MarkdownRenderer content={currentLesson.content} />
                           </div>
                         ) : (
                           <div className="no-content">
