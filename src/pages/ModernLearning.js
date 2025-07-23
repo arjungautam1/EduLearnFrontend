@@ -19,6 +19,8 @@ const ModernLearning = () => {
   const [generatingCertificate, setGeneratingCertificate] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
 
   const fetchLearningData = useCallback(async () => {
     try {
@@ -92,19 +94,28 @@ const ModernLearning = () => {
   };
 
   const handleLessonSelect = (moduleIndex, lessonIndex) => {
-    const module = course.modules[moduleIndex];
-    const lesson = module.lessons[lessonIndex];
-    setCurrentLesson({
-      ...lesson,
-      moduleIndex,
-      lessonIndex
-    });
+    setIsTransitioning(true);
+    
+    // Small delay for smooth transition animation
+    setTimeout(() => {
+      const module = course.modules[moduleIndex];
+      const lesson = module.lessons[lessonIndex];
+      setCurrentLesson({
+        ...lesson,
+        moduleIndex,
+        lessonIndex
+      });
+      setIsTransitioning(false);
+    }, 200);
   };
 
   const markLessonComplete = async () => {
     if (!currentLesson || !currentLesson._id) return;
     
     try {
+      // Show completion animation
+      setShowCompletionAnimation(true);
+      
       const response = await enrollmentAPI.markLessonComplete(courseId, currentLesson._id);
       if (response.success) {
         const newCompletedLessons = [...completedLessons, currentLesson._id];
@@ -117,16 +128,26 @@ const ModernLearning = () => {
         
         await enrollmentAPI.updateProgress(courseId, newProgress);
         setEnrollment({ ...enrollment, progress: newProgress });
-        setAnimatedProgress(newProgress);
         
-        if (newProgress >= 100) {
-          await handleCourseCompletion();
-        } else {
-          moveToNextLesson();
-        }
+        // Animate progress bar with delay
+        setTimeout(() => {
+          setAnimatedProgress(newProgress);
+        }, 300);
+        
+        // Hide completion animation after delay
+        setTimeout(() => {
+          setShowCompletionAnimation(false);
+          
+          if (newProgress >= 100) {
+            handleCourseCompletion();
+          } else {
+            moveToNextLesson();
+          }
+        }, 1500);
       }
     } catch (error) {
       console.error('Error marking lesson complete:', error);
+      setShowCompletionAnimation(false);
     }
   };
 
@@ -269,7 +290,14 @@ const ModernLearning = () => {
           <div className="text-center">
             <div className="loading-spinner"></div>
             <h4 className="mt-4 text-gradient">Loading your course...</h4>
-            <p className="text-muted">Please wait while we prepare your learning experience</p>
+            <p className="text-white opacity-75">Please wait while we prepare your learning experience</p>
+            <div className="mt-4">
+              <div className="d-flex justify-content-center gap-2">
+                <div className="loading-dot" style={{animationDelay: '0ms'}}></div>
+                <div className="loading-dot" style={{animationDelay: '150ms'}}></div>
+                <div className="loading-dot" style={{animationDelay: '300ms'}}></div>
+              </div>
+            </div>
           </div>
         </Container>
       </div>
@@ -409,7 +437,20 @@ const ModernLearning = () => {
           {/* Modern Main Content */}
           <Col lg={9} className="content-col">
             <div className="modern-content">
-              {currentLesson ? (
+              {/* Completion Animation Overlay */}
+              {showCompletionAnimation && (
+                <div className="completion-overlay">
+                  <div className="completion-animation-content">
+                    <div className="success-icon">✨</div>
+                    <h3>Lesson Completed!</h3>
+                    <p>Great job! Moving to the next lesson...</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Content Transition Wrapper */}
+              <div className={`content-wrapper ${isTransitioning ? 'transitioning' : ''}`}>
+                {currentLesson ? (
                 <>
                   {/* Lesson Header */}
                   <div className="lesson-header">
@@ -575,6 +616,7 @@ const ModernLearning = () => {
                   </Button>
                 </div>
               )}
+              </div>
             </div>
           </Col>
         </Row>
