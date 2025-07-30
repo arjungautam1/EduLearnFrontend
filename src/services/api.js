@@ -9,7 +9,7 @@ console.log('Environment:', process.env.NODE_ENV);
 
 // Create axios instance
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: `${API_BASE_URL.replace(/\/$/, '')}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
