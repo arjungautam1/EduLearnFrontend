@@ -57,7 +57,7 @@ const CoursesPage = () => {
       });
       
       const queryParams = new URLSearchParams(apiParams);
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://edulearnbackend.onrender.com';
+git s      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://edulearn-9aygc.ondigitalocean.app';
       
       const response = await fetch(`${API_BASE_URL}/api/courses?${queryParams}`);
       const data = await response.json();
