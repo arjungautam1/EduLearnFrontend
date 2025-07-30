@@ -50,14 +50,14 @@ const CoursesPage = () => {
       }
 
       // Remove empty values
-      Object.keys(apiParams).forEach(key => {
+      Object.keys(apiParams).forEach((key) => {
         if (!apiParams[key] && apiParams[key] !== 0) {
           delete apiParams[key];
         }
       });
       
       const queryParams = new URLSearchParams(apiParams);
-git s      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://edulearn-9aygc.ondigitalocean.app';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://edulearn-9aygc.ondigitalocean.app';
       
       const response = await fetch(`${API_BASE_URL}/api/courses?${queryParams}`);
       const data = await response.json();
