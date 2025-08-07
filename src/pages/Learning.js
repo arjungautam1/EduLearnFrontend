@@ -373,9 +373,9 @@ const Learning = () => {
       </div>
 
       <Container fluid className="learning-container">
-        <Row className="g-0">
+        <Row className="g-0 h-100">
           {/* Modern Sidebar */}
-          <Col lg={3} className="sidebar-col">
+          <Col lg={3} className="sidebar-col p-0">
             <div className="modern-sidebar">
               <div className="sidebar-header">
                 <h3 className="sidebar-title">
@@ -437,7 +437,7 @@ const Learning = () => {
           </Col>
 
           {/* Modern Main Content */}
-          <Col lg={9} className="content-col">
+          <Col lg={9} className="content-col p-0">
             <div className="modern-content">
               {/* Content Transition Wrapper */}
               <div className={`content-wrapper ${isTransitioning ? 'transitioning' : ''}`}>

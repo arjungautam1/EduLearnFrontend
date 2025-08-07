@@ -177,8 +177,18 @@ const RichTextEditor = ({ value, onChange, placeholder = "Enter lesson content..
       .replace(/^- \[x\] (.*$)/gm, '<li><input type="checkbox" checked disabled> $1</li>')
       // Quotes
       .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
-      // Code blocks
-      .replace(/```([\s\S]*?)```/g, '<pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #007bff;"><code>$1</code></pre>')
+      // Code blocks with language support
+      .replace(/```(\w+)?\s*\n?([\s\S]*?)```/g, (match, lang, code) => {
+        const language = lang || 'text';
+        const languageLabel = language.charAt(0).toUpperCase() + language.slice(1);
+        const cleanCode = code.trim();
+        return `<div style="margin: 1rem 0;">
+          <div style="background: #6c757d; color: white; padding: 0.5rem 1rem; border-radius: 8px 8px 0 0; font-size: 0.875rem; font-weight: bold;">
+            ${languageLabel}
+          </div>
+          <pre style="background: #212529; color: #f8f9fa; padding: 1rem; border-radius: 0 0 8px 8px; margin: 0; border-left: 4px solid #007bff; overflow-x: auto;"><code>${cleanCode}</code></pre>
+        </div>`;
+      })
       // Horizontal rules
       .replace(/^---$/gm, '<hr style="border: 2px solid #dee2e6; margin: 2rem 0;">')
       // Tables (basic)

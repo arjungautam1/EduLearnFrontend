@@ -31,7 +31,7 @@ const DashboardPage = () => {
         return;
       }
 
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://edulearn-9aygc.ondigitalocean.app';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
       // Fetch enrolled courses for students
       if (user?.role === 'student') {
